@@ -4,8 +4,13 @@ from qlib.constant import REG_CN
 from qlib.workflow import R
 from qlib.utils import init_instance_by_config, flatten_dict
 from qlib.workflow.record_temp import SignalRecord, PortAnaRecord
+from qlib.contrib.evaluate import backtest_daily
+from qlib.contrib.evaluate import risk_analysis
+from qlib.contrib.strategy import TopkDropoutStrategy
 
 from bias_data_handler import BIASDataHandler
+
+import pandas as pd
 
 qlib.init(provider_uri="/home/greetlist/workspace/data_storage/qlib/SSE", region=REG_CN)
 
@@ -59,7 +64,7 @@ task = {
             "segments": {
                 "train": ("2007-01-01", "2021-12-31"),
                 "valid": ("2022-01-01", "2022-12-31"),
-                "test": ("2023-05-01", "2023-11-01"),
+                "test": ("2023-01-01", "2023-05-31"),
             },
         },
     },
@@ -77,7 +82,66 @@ with R.start(experiment_name="workflow"):
     res.to_csv('test.csv', index=False)
     
     # prediction
-    #recorder = R.get_recorder()
-    #sr = SignalRecord(model, dataset, recorder)
-    #sr.generate()
+    recorder = R.get_recorder()
+    sr = SignalRecord(model, dataset, recorder)
+    sr.generate()
 
+pred_score = pd.read_pickle("score.pkl")["score"]
+
+FREQ = "day"
+STRATEGY_CONFIG = {
+    "topk": 50,
+    "n_drop": 5,
+    # pred_score, pd.Series
+    "signal": pred_score,
+}
+
+EXECUTOR_CONFIG = {
+    "time_per_step": "day",
+    "generate_portfolio_metrics": True,
+}
+
+backtest_config = {
+    "start_time": "2023-06-01",
+    "end_time": "2023-11-01",
+    "account": 100000000,
+    "benchmark": "601607.SH",
+    "exchange_kwargs": {
+        "freq": FREQ,
+        "limit_threshold": 0.095,
+        "deal_price": "close",
+        "open_cost": 0.0005,
+        "close_cost": 0.0015,
+        "min_cost": 5,
+    },
+}
+
+# strategy object
+strategy_obj = TopkDropoutStrategy(**STRATEGY_CONFIG)
+# executor object
+executor_obj = executor.SimulatorExecutor(**EXECUTOR_CONFIG)
+# backtest
+portfolio_metric_dict, indicator_dict = backtest(executor=executor_obj, strategy=strategy_obj, **backtest_config)
+analysis_freq = "{0}{1}".format(*Freq.parse(FREQ))
+# backtest info
+report_normal, positions_normal = portfolio_metric_dict.get(analysis_freq)
+
+# analysis
+analysis = dict()
+analysis["excess_return_without_cost"] = risk_analysis(
+    report_normal["return"] - report_normal["bench"], freq=analysis_freq
+)
+analysis["excess_return_with_cost"] = risk_analysis(
+    report_normal["return"] - report_normal["bench"] - report_normal["cost"], freq=analysis_freq
+)
+
+analysis_df = pd.concat(analysis)  # type: pd.DataFrame
+# log metrics
+analysis_dict = flatten_dict(analysis_df["risk"].unstack().T.to_dict())
+# print out results
+print(f"The following are analysis results of benchmark return({analysis_freq}).")
+print(risk_analysis(report_normal["bench"], freq=analysis_freq))
+print(f"The following are analysis results of the excess return without cost({analysis_freq}).")
+print(analysis["excess_return_without_cost"])
+print(f"The following are analysis results of the excess return with cost({analysis_freq}).")
+print(analysis["excess_return_with_cost"])
