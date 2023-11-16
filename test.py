@@ -11,15 +11,17 @@ from qlib.contrib.strategy import TopkDropoutStrategy
 from bias_data_handler import BIASDataHandler
 
 import pandas as pd
+import sys
 
-qlib.init(provider_uri="/home/greetlist/workspace/data_storage/qlib/SSE", region=REG_CN)
+qlib.init(provider_uri="/home/greetlist/workspace/data_storage/qlib/", region=REG_CN)
 
-code_list = ["600759.sh"]
+code_list = ["002142.sz"]
 fields = ["$high", "$open", "$low", "$close", "$vol", "Mean($close, 13)", "Mean($close, 34)", "Mean($close, 55)"]
 fields = ["$close", "$vol", "($close - Mean($close, 13)) / Mean($close, 13) * 100", "Mean($close, 34)", "Mean($close, 55)"]
 
 data = D.features(code_list, fields, start_time="2017-01-01", freq="day")
 print(data)
+sys.exit(0)
 
 data_handler_config = {
     "start_time": "2007-01-01",
@@ -80,7 +82,7 @@ with R.start(experiment_name="workflow"):
 
     res = model.predict(dataset).reset_index()
     res.to_csv('test.csv', index=False)
-    
+
     # prediction
     recorder = R.get_recorder()
     sr = SignalRecord(model, dataset, recorder)

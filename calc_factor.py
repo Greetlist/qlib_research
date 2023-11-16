@@ -4,10 +4,18 @@ from qlib.constant import REG_CN
 import pandas as pd
 import argh
 import os
+import glob
 
 def get_stock_code_list():
    df = pd.read_csv('/home/greetlist/workspace/data_storage/tushare/raw/total_stock.csv', usecols=['ts_code'])
    return list(df['ts_code'].values)
+
+def change_vol_name():
+    raw_df_path = '/home/greetlist/workspace/data_storage/tushare/raw/day/*'
+    for f in glob.glob(raw_df_path):
+        df = pd.read_csv(f)
+        df = df.rename(columns={'vol':'volumn'})
+        df.to_csv(f, index=False)
 
 def calc(factor_list_str):
     convert_save_dir = '/home/greetlist/workspace/data_storage/convert_features'
@@ -43,4 +51,4 @@ def calc(factor_list_str):
         data.to_csv(os.path.join(convert_save_dir, code + '.csv'), index=False)
 
 if __name__ == '__main__':
-    argh.dispatch_commands([calc])
+    argh.dispatch_commands([calc, change_vol_name])
