@@ -7,6 +7,7 @@ from qlib.workflow.record_temp import SignalRecord, PortAnaRecord
 from qlib.contrib.evaluate import backtest_daily
 from qlib.contrib.evaluate import risk_analysis
 from qlib.contrib.strategy import TopkDropoutStrategy
+from qlib.contrib.data.handler import Alpha158
 
 from bias_data_handler import BIASDataHandler
 
@@ -20,8 +21,7 @@ fields = ["$high", "$open", "$low", "$close", "$vol", "Mean($close, 13)", "Mean(
 fields = ["$close", "$vol", "($close - Mean($close, 13)) / Mean($close, 13) * 100", "Mean($close, 34)", "Mean($close, 55)"]
 
 data = D.features(code_list, fields, start_time="2017-01-01", freq="day")
-print(data)
-sys.exit(0)
+#print(data)
 
 data_handler_config = {
     "start_time": "2007-01-01",
@@ -32,11 +32,13 @@ data_handler_config = {
     "instruments": ["601607.SH", "600239.SH", "600251.SH"],
 }
 
-h = BIASDataHandler(**data_handler_config)
+h = Alpha158(**data_handler_config)
 
 print(h.get_cols())
 print(h.fetch(col_set="label"))
 print(h.fetch(col_set="feature"))
+
+sys.exit(0)
 
 task = {
     "model": {

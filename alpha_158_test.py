@@ -2,12 +2,20 @@ import qlib
 import argh
 from qlib.data import D
 from qlib.constant import REG_CN
+from qlib.workflow import R
 from qlib.contrib.data.handler import Alpha158
+from qlib.utils.time import Freq
 from qlib.utils import init_instance_by_config, flatten_dict
 from qlib.workflow.record_temp import SignalRecord
 from qlib.contrib.evaluate import risk_analysis
-
 from qlib.contrib.evaluate import backtest_daily
+from qlib.contrib.strategy import TopkDropoutStrategy
+from qlib.backtest import backtest, executor
+
+import pandas as pd
+
+import mlflow
+mlflow.utils.validation.MAX_PARAM_VAL_LENGTH = 50000
 
 def gen_config(code_list):
     data_handler_config = {
@@ -43,9 +51,9 @@ def gen_config(code_list):
                     "kwargs": data_handler_config,
                 },
                 "segments": {
-                    "train": ("2016-01-01", "2021-12-31"),
-                    "valid": ("2022-01-01", "2022-12-31"),
-                    "test": ("2023-01-01", "2023-04-30"),
+                    "train": ("2016-01-01", "2020-12-31"),
+                    "valid": ("2021-01-01", "2021-12-31"),
+                    "test": ("2022-01-01", "2022-12-31"),
                 },
             },
         },
@@ -55,17 +63,10 @@ def gen_config(code_list):
 def train(data_handler_config, task_config):
     model = init_instance_by_config(task_config["model"])
     dataset = init_instance_by_config(task_config["dataset"])
+    model.fit(dataset)
+    return model.predict(dataset)
 
-    with R.start(experiment_name="workflow"):
-        # train
-        R.log_params(**flatten_dict(task_config))
-        model.fit(dataset)
-        # prediction
-        recorder = R.get_recorder()
-        sr = SignalRecord(model, dataset, recorder)
-        sr.generate()
-
-def simulation():
+def simulation(pred_score):
     FREQ = "day"
     STRATEGY_CONFIG = {
         "topk": 10,
@@ -80,9 +81,10 @@ def simulation():
     }
     
     backtest_config = {
-        "start_time": "2023-05-01",
+        "start_time": "2023-01-01",
         "end_time": "2023-11-01",
-        "account": 100000000,
+        "account": 10000000,
+        "benchmark": "000300.SH",
         "exchange_kwargs": {
             "freq": FREQ,
             "limit_threshold": 0.095,
@@ -119,15 +121,16 @@ def simulation():
 def get_total_stock_code():
     stock_csv = '/home/greetlist/workspace/data_storage/tushare/raw/total_stock.csv'
     df = pd.read_csv(stock_csv, usecols=['ts_code'])
-    df = df[df['ts_code'].str.startswith('00') | df['ts_code'].str.startwith('60')]
+    #df = df[df['ts_code'].str.startswith('00') | df['ts_code'].str.startswith('60')]  #Too Many Stock cost a lot of Memory, cause OOM
+    df = df[df['ts_code'].str.startswith('00')]
     return list(df['ts_code'].values)
 
 def run(stock_code='all'):
     qlib.init(provider_uri="/home/greetlist/workspace/data_storage/qlib/", region=REG_CN)
     code_list = stock_code.split(',') if stock_code != 'all' else get_total_stock_code()
     data_handler_config, task_config = gen_config(code_list)
-    train(data_handler_config, task_config)
-    simulation()
+    pred_score = train(data_handler_config, task_config)
+    simulation(pred_score)
 
 if __name__ == '__main__':
     argh.dispatch_commands([run])

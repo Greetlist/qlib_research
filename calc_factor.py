@@ -14,7 +14,7 @@ def change_vol_name():
     raw_df_path = '/home/greetlist/workspace/data_storage/tushare/raw/day/*'
     for f in glob.glob(raw_df_path):
         df = pd.read_csv(f)
-        df = df.rename(columns={'vol':'volumn'})
+        df = df.rename(columns={'vol':'volume'})
         df.to_csv(f, index=False)
 
 def calc(factor_list_str):
@@ -22,7 +22,7 @@ def calc(factor_list_str):
     qlib.init(provider_uri="/home/greetlist/workspace/data_storage/qlib/", region=REG_CN)
     code_list = get_stock_code_list()
     #code_list = ["002142.SZ", "600000.SH"]
-    fields = ["$high", "$open", "$low", "$close", "$vol"]
+    fields = ["$high", "$open", "$low", "$close", "$volume"]
     factor_list = factor_list_str.split(',')
     rename_dict = dict()
     for factor in factor_list:
