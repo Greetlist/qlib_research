@@ -46,8 +46,10 @@ def gen_config(code_list):
             "module_path": "qlib.data.dataset",
             "kwargs": {
                 "handler": {
-                    "class": "Alpha158",
-                    "module_path": "qlib.contrib.data.handler",
+                    #"class": "Alpha158",
+                    #"module_path": "qlib.contrib.data.handler",
+                    "class": "BIASDataHandler",
+                    "module_path": "bias_data_handler",
                     "kwargs": data_handler_config,
                 },
                 "segments": {
@@ -69,7 +71,7 @@ def train(data_handler_config, task_config):
 def simulation(pred_score):
     FREQ = "day"
     STRATEGY_CONFIG = {
-        "topk": 10,
+        "topk": 20,
         "n_drop": 5,
         # pred_score, pd.Series
         "signal": pred_score,
@@ -83,7 +85,7 @@ def simulation(pred_score):
     backtest_config = {
         "start_time": "2023-01-01",
         "end_time": "2023-11-01",
-        "account": 10000000,
+        "account": 100000,
         "benchmark": "000300.SH",
         "exchange_kwargs": {
             "freq": FREQ,
@@ -121,8 +123,8 @@ def simulation(pred_score):
 def get_total_stock_code():
     stock_csv = '/home/greetlist/workspace/data_storage/tushare/raw/total_stock.csv'
     df = pd.read_csv(stock_csv, usecols=['ts_code'])
-    #df = df[df['ts_code'].str.startswith('00') | df['ts_code'].str.startswith('60')]  #Too Many Stock cost a lot of Memory, cause OOM
-    df = df[df['ts_code'].str.startswith('00')]
+    df = df[df['ts_code'].str.startswith('00') | df['ts_code'].str.startswith('60')]  #Too Many Stock cost a lot of Memory, cause OOM
+    #df = df[df['ts_code'].str.startswith('00')]
     return list(df['ts_code'].values)
 
 def run(stock_code='all'):

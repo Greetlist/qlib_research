@@ -25,25 +25,22 @@ def calc(factor_list_str):
     fields = ["$high", "$open", "$low", "$close", "$volume"]
     factor_list = factor_list_str.split(',')
     rename_dict = dict()
+    n_days_list = [13, 21, 34, 55]
     for factor in factor_list:
         if 'ma' == factor:
-            fields += [
-                "Mean($close, 13)",
-                "Mean($close, 34)",
-                "Mean($close, 55)",
-            ]
-            rename_dict["Mean($close, 13)"] = "MA13"
-            rename_dict["Mean($close, 34)"] = "MA34"
-            rename_dict["Mean($close, 55)"] = "MA55"
+            factor_calc_template = "Mean($close, {day})"
+            rename_col_template = "MA{day}"
         elif 'bias' == factor:
-            fields += [
-                "($close - Mean($close, 13)) / Mean($close, 13) * 100",
-                "($close - Mean($close, 34)) / Mean($close, 34) * 100",
-                "($close - Mean($close, 55)) / Mean($close, 55) * 100",
-            ]
-            rename_dict["($close - Mean($close, 13)) / Mean($close, 13) * 100"] = "BIAS13"
-            rename_dict["($close - Mean($close, 34)) / Mean($close, 34) * 100"] = "BIAS34"
-            rename_dict["($close - Mean($close, 55)) / Mean($close, 55) * 100"] = "BIAS55"
+            factor_calc_template = "($close - Mean($close, {day})) / Mean($close, {day}) * 100"
+            rename_col_template = "BIAS{day}"
+        elif 'rsv' == factor:
+            factor_calc_template = "($close-Min($low, {day}))/(Max($high, {day})-Min($low, {day})+1e-12)"
+            rename_col_template = "RSV{day}"
+
+        for day in n_days_list:
+            factor_calc = factor_calc_template.format(**locals())
+            fields.append(factor_calc)
+            rename_dict[factor_calc] = rename_col_template.format(**locals())
 
     for code in code_list:
         data = D.features([code], fields, start_time="2001-01-01", freq="day")

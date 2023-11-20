@@ -13,7 +13,7 @@ _DEFAULT_INFER_PROCESSORS = [
 class BIASDataHandler(DataHandlerLP):
     def __init__(
         self,
-        instruments="sh600000",
+        instruments="002142.sz",
         start_time=None,
         end_time=None,
         freq="day",
@@ -47,7 +47,7 @@ class BIASDataHandler(DataHandlerLP):
         )
 
     def get_label_config(self):
-        return ["(Ref($close, -2)/Ref($close, -1) - 1) * 100"], ["LABEL0"]
+        return ["Ref($close, -2)/Ref($close, -1) - 1"], ["LABEL0"]
 
     @staticmethod
     def get_feature_config():
